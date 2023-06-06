@@ -76,6 +76,18 @@ std::tuple<std::vector<KeyValue<build_payload>>, std::vector<KeyValue<probe_payl
     return {build_kv, probe_kv};
 }
 
+void FlushCache()
+{
+    const size_t bigger_than_cachesize = 15 * 1024 * 1024;
+    long *p = new long[bigger_than_cachesize];
+    // When you want to "flush" cache.
+    for(int i = 0; i < bigger_than_cachesize; i++)
+    {
+        p[i] = rand();
+    }
+    delete [] p;
+}
+
 template<bool construct_tuple, size_t build_payload = 8, size_t probe_payload = 8>
 void TestLinear(size_t build_size, size_t probe_size, size_t match_possibility)
 {
@@ -115,6 +127,11 @@ void TestLinear(size_t build_size, size_t probe_size, size_t match_possibility)
 
     printf("%s build hash table time %llu, size %zu, buf %zu, collision %zu\n", log_head.c_str(), build_hash_time, hash_table.size(), hash_table.bufSize(), collision);
 
+    FlushCache();
+    unsigned long long flush_cache_time = watch.elapsedFromLastTime();
+
+    printf("%s flush cache time %llu\n", log_head.c_str(), flush_cache_time);
+
     std::vector<KeyValue<build_payload>> output_build;
     output_build.reserve(probe_size);
     std::vector<KeyValue<probe_payload>> output_probe;
@@ -147,7 +164,7 @@ void TestLinear(size_t build_size, size_t probe_size, size_t match_possibility)
 
     printf("%s probe hash table + construct tuple time %llu, size %lu, collision %zu\n", log_head.c_str(), probe_hash_time, offset, collision);
 
-    unsigned long long total_time = watch2.elapsedFromLastTime();
+    unsigned long long total_time = watch2.elapsedFromLastTime() - flush_cache_time;
     printf("%s total_time %llu\n", log_head.c_str(), total_time);
 }
 
@@ -189,6 +206,11 @@ void TestLinearPrefetch(size_t build_size, size_t probe_size, size_t match_possi
     unsigned long long build_hash_time = watch.elapsedFromLastTime();
 
     printf("%s build hash table time %llu, size %zu, buf %zu, collision %zu\n", log_head.c_str(), build_hash_time, hash_table.size(), hash_table.bufSize(), collision);
+
+    FlushCache();
+    unsigned long long flush_cache_time = watch.elapsedFromLastTime();
+
+    printf("%s flush cache time %llu\n", log_head.c_str(), flush_cache_time);
 
     std::vector<KeyValue<build_payload>> output_build;
     output_build.reserve(probe_size);
@@ -237,7 +259,7 @@ void TestLinearPrefetch(size_t build_size, size_t probe_size, size_t match_possi
 
     printf("%s probe hash table + construct tuple time %llu, size %lu, collision %zu\n", log_head.c_str(), probe_hash_time, offset, collision);
 
-    unsigned long long total_time = watch2.elapsedFromLastTime();
+    unsigned long long total_time = watch2.elapsedFromLastTime() - flush_cache_time;
     printf("%s total_time %llu\n", log_head.c_str(), total_time);
 }
 
@@ -268,6 +290,11 @@ void TestChained(size_t build_size, size_t probe_size, size_t match_possibility)
     unsigned long long build_hash_time = watch.elapsedFromLastTime();
 
     printf("%s build hash table time %llu\n", log_head.c_str(), build_hash_time);
+
+    FlushCache();
+    unsigned long long flush_cache_time = watch.elapsedFromLastTime();
+
+    printf("%s flush cache time %llu\n", log_head.c_str(), flush_cache_time);
 
     std::vector<KeyValue<build_payload>> output_build;
     output_build.reserve(probe_size);
@@ -308,7 +335,7 @@ void TestChained(size_t build_size, size_t probe_size, size_t match_possibility)
 
     printf("%s probe hash table + construct tuple time %llu, size %lu, max_len %zu, empty_head %zu, jump_len_sum %zu \n", log_head.c_str(), probe_hash_time, offset, max_len, empty_count, jump_len_sum);
 
-    unsigned long long total_time = watch2.elapsedFromLastTime();
+    unsigned long long total_time = watch2.elapsedFromLastTime() - flush_cache_time;
     printf("%s total_time %llu\n", log_head.c_str(), total_time);
 }
 
@@ -380,6 +407,11 @@ void TestMyLinear(size_t build_size, size_t probe_size, size_t match_possibility
 
     printf("%s build hash table time %llu\n", log_head.c_str(), build_hash_time);
 
+    FlushCache();
+    unsigned long long flush_cache_time = watch.elapsedFromLastTime();
+
+    printf("%s flush cache time %llu\n", log_head.c_str(), flush_cache_time);
+
     std::vector<KeyValue<build_payload>> output_build;
     output_build.reserve(probe_size);
     std::vector<KeyValue<probe_payload>> output_probe;
@@ -421,7 +453,7 @@ void TestMyLinear(size_t build_size, size_t probe_size, size_t match_possibility
 
     printf("%s probe hash table + construct tuple time %llu, size %lu, max_len %zu\n", log_head.c_str(), probe_hash_time, offset, max_len);
 
-    unsigned long long total_time = watch2.elapsedFromLastTime();
+    unsigned long long total_time = watch2.elapsedFromLastTime() - flush_cache_time;
     printf("%s total_time %llu\n", log_head.c_str(), total_time);
 }
 
@@ -533,6 +565,11 @@ void TestMyLinear2(size_t build_size, size_t probe_size, size_t match_possibilit
 
     printf("%s build hash table time %llu\n", log_head.c_str(), build_hash_time);
 
+    FlushCache();
+    unsigned long long flush_cache_time = watch.elapsedFromLastTime();
+
+    printf("%s flush cache time %llu\n", log_head.c_str(), flush_cache_time);
+
     std::vector<KeyValue<build_payload>> output_build;
     output_build.reserve(probe_size);
     std::vector<KeyValue<probe_payload>> output_probe;
@@ -599,7 +636,7 @@ void TestMyLinear2(size_t build_size, size_t probe_size, size_t match_possibilit
 
     printf("%s probe hash table + construct tuple time %llu, size %lu, max_len %zu\n", log_head.c_str(), probe_hash_time, offset, max_len);
 
-    unsigned long long total_time = watch2.elapsedFromLastTime();
+    unsigned long long total_time = watch2.elapsedFromLastTime() - flush_cache_time;
     printf("%s total_time %llu\n", log_head.c_str(), total_time);
 }
 
