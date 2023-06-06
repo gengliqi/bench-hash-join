@@ -77,7 +77,7 @@ std::tuple<std::vector<KeyValue<build_payload>>, std::vector<KeyValue<probe_payl
 template<bool construct_tuple, size_t build_payload = 8, size_t probe_payload = 8>
 void TestLinear(size_t build_size, size_t probe_size, size_t match_possibility)
 {
-    std::string log_head = "linear " + std::to_string(build_size) + "/" + std::to_string(probe_size) + "/" + std::to_string(match_possibility);
+    std::string log_head = "linear " + std::to_string(build_size) + "/" + std::to_string(probe_size) + "/" + std::to_string(match_possibility) + "/" + std::to_string(construct_tuple);
 
     auto [build_kv, probe_kv] = init<build_payload, probe_payload>(build_size, probe_size, match_possibility);
 
@@ -152,7 +152,7 @@ void TestLinear(size_t build_size, size_t probe_size, size_t match_possibility)
 template<bool construct_tuple, size_t build_payload = 8, size_t probe_payload = 8>
 void TestLinearPrefetch(size_t build_size, size_t probe_size, size_t match_possibility)
 {
-    std::string log_head = "linear(prefetch) " + std::to_string(build_size) + "/" + std::to_string(probe_size) + "/" + std::to_string(match_possibility);
+    std::string log_head = "linear(prefetch) " + std::to_string(build_size) + "/" + std::to_string(probe_size) + "/" + std::to_string(match_possibility) + "/" + std::to_string(construct_tuple);
 
     auto [build_kv, probe_kv] = init<build_payload, probe_payload>(build_size, probe_size, match_possibility);
 
@@ -242,7 +242,7 @@ void TestLinearPrefetch(size_t build_size, size_t probe_size, size_t match_possi
 template<bool construct_tuple, size_t build_payload = 8, size_t probe_payload = 8>
 void TestChained(size_t build_size, size_t probe_size, size_t match_possibility)
 {
-    std::string log_head = "chained " + std::to_string(build_size) + "/" + std::to_string(probe_size) + "/" + std::to_string(match_possibility);
+    std::string log_head = "chained " + std::to_string(build_size) + "/" + std::to_string(probe_size) + "/" + std::to_string(match_possibility) + "/" + std::to_string(construct_tuple);
 
     auto [build_kv, probe_kv] = init<build_payload, probe_payload>(build_size, probe_size, match_possibility);
 
@@ -313,7 +313,7 @@ void TestChained(size_t build_size, size_t probe_size, size_t match_possibility)
 template<bool construct_tuple, size_t build_payload = 8, size_t probe_payload = 8>
 void TestMyLinear(size_t build_size, size_t probe_size, size_t match_possibility)
 {
-    std::string log_head = "my linear " + std::to_string(build_size) + "/" + std::to_string(probe_size) + "/" + std::to_string(match_possibility);
+    std::string log_head = "my linear " + std::to_string(build_size) + "/" + std::to_string(probe_size) + "/" + std::to_string(match_possibility) + "/" + std::to_string(construct_tuple);
 
     auto [build_kv, probe_kv] = init<build_payload, probe_payload>(build_size, probe_size, match_possibility);
 
@@ -426,7 +426,7 @@ void TestMyLinear(size_t build_size, size_t probe_size, size_t match_possibility
 template<bool construct_tuple, size_t build_payload = 8, size_t probe_payload = 8>
 void TestMyLinear2(size_t build_size, size_t probe_size, size_t match_possibility)
 {
-    std::string log_head = "my linear2 " + std::to_string(build_size) + "/" + std::to_string(probe_size) + "/" + std::to_string(match_possibility);
+    std::string log_head = "my linear2 " + std::to_string(build_size) + "/" + std::to_string(probe_size) + "/" + std::to_string(match_possibility) + "/" + std::to_string(construct_tuple);
 
     auto [build_kv, probe_kv] = init<build_payload, probe_payload>(build_size, probe_size, match_possibility);
 
