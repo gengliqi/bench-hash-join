@@ -69,7 +69,7 @@ std::tuple<std::vector<KeyValue<build_payload>>, std::vector<KeyValue<probe_payl
         }
         else
         {
-            probe_kv.emplace_back(int_dist(mt) + UINT32_MAX + 1);
+            probe_kv.emplace_back(uint64_t(int_dist(mt)) + UINT32_MAX + 1);
         }
     }
 
@@ -642,6 +642,7 @@ void TestMyLinear2(size_t build_size, size_t probe_size, size_t match_possibilit
 
 void benchHashTable(int argc, char** argv)
 {
+    TestLinear<false>(100, 1000, 0);
     if (argc < 6)
     {
         printf("lack argument\n");
