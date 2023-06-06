@@ -79,9 +79,9 @@ std::tuple<std::vector<KeyValue<build_payload>>, std::vector<KeyValue<probe_payl
 void FlushCache()
 {
     const size_t bigger_than_cachesize = 15 * 1024 * 1024;
-    long *p = new long[bigger_than_cachesize];
+    long * p = new long[bigger_than_cachesize];
     // When you want to "flush" cache.
-    for(int i = 0; i < bigger_than_cachesize; i++)
+    for(size_t i = 0; i < bigger_than_cachesize; ++i)
     {
         p[i] = rand();
     }
