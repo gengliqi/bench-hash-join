@@ -481,6 +481,20 @@ protected:
         return place_value;
     }
 
+    Cell * ALWAYS_INLINE findCellPointer(const Key & x, size_t hash_value, size_t place_value) const
+    {
+        while (true)
+        {
+            if (buf[place_value].isZero(*this))
+                return nullptr;
+            if (buf[place_value].keyEquals(x, hash_value, *this))
+                return &buf[place_value];
+            place_value = grower.next(place_value);
+#ifdef DBMS_HASH_MAP_COUNT_COLLISIONS
+            ++collisions;
+#endif
+        }
+    }
 
     /// Find an empty cell, starting with the specified position and further along the collision resolution chain.
     size_t ALWAYS_INLINE findEmptyCell(size_t place_value) const
@@ -1026,8 +1040,9 @@ public:
             return this->hasZero() ? this->zeroValue() : nullptr;
 
         size_t hash_value = hash(x);
-        size_t place_value = findCell(x, hash_value, grower.place(hash_value));
-        return !buf[place_value].isZero(*this) ? &buf[place_value] : nullptr;
+        return findCellPointer(x, hash_value, grower.place(hash_value));
+        //size_t place_value = findCell(x, hash_value, grower.place(hash_value));
+        //return !buf[place_value].isZero(*this) ? &buf[place_value] : nullptr;
     }
 
     ConstLookupResult ALWAYS_INLINE find(const Key & x) const
@@ -1040,8 +1055,9 @@ public:
         if (Cell::isZero(x, *this))
             return this->hasZero() ? this->zeroValue() : nullptr;
 
-        size_t place_value = findCell(x, hash_value, grower.place(hash_value));
-        return !buf[place_value].isZero(*this) ? &buf[place_value] : nullptr;
+        return findCellPointer(x, hash_value, grower.place(hash_value));
+        //size_t place_value = findCell(x, hash_value, grower.place(hash_value));
+        //return !buf[place_value].isZero(*this) ? &buf[place_value] : nullptr;
     }
 
     ConstLookupResult ALWAYS_INLINE find(const Key & x, size_t hash_value) const
