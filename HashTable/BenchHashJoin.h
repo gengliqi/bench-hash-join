@@ -287,11 +287,11 @@ void TestChained(size_t build_size, size_t probe_size, size_t match_possibility)
         {
             if (h->key == probe_kv[i].key)
             {
+                ++offset;
                 if constexpr (construct_tuple)
                 {
                     output_build.emplace_back(*h);
                     output_probe.emplace_back(probe_kv[i]);
-                    ++offset;
                 }
             }
             ++len;
