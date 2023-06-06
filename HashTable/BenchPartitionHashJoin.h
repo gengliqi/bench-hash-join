@@ -1,3 +1,5 @@
+#pragma once
+
 #include "BenchHashJoin.h"
 
 template<size_t payload>
