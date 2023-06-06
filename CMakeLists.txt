@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
-project(c___toy)
+project(bench-hash-join)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(mm
-        main.cpp)
+aux_source_directory(. DIR_SRCS)
+
+add_executable(bench-hash-join ${DIR_SRCS})
 

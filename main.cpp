@@ -1,4 +1,4 @@
-#include "HashTable/BenchHashTable.h"
+#include "HashTable/BenchHashJoin.h"
 
 
 int main(int argc, char** argv) {
