@@ -1034,6 +1034,17 @@ public:
             resize();
     }
 
+    LookupResult ALWAYS_INLINE findFirstForTest(const Key & x)
+    {
+        //if (Cell::isZero(x, *this))
+        //    return this->hasZero() ? this->zeroValue() : nullptr;
+        size_t hash_value = hash(x);
+        size_t place_value = grower.place(hash_value);
+        if (buf[place_value].keyEquals(x, hash_value, *this))
+            return &buf[place_value];
+        return nullptr;
+    }
+
     LookupResult ALWAYS_INLINE find(const Key & x)
     {
         if (Cell::isZero(x, *this))

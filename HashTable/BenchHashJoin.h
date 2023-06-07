@@ -69,7 +69,7 @@ std::tuple<std::vector<KeyValue<build_payload>>, std::vector<KeyValue<probe_payl
         }
         else
         {
-            probe_kv.emplace_back(uint64_t(int_dist(mt)) + UINT32_MAX + 1);
+            probe_kv.emplace_back(uint64_t(int_dist(mt)) + UINT32_MAX);
         }
     }
 
