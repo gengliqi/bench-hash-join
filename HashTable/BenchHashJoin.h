@@ -382,8 +382,8 @@ void TestChainedPrefetch(size_t build_size, size_t probe_size, size_t match_poss
     struct State
     {
         uint32_t stage = 0;
-        uint32_t key;
-        size_t bucket;
+        uint32_t bucket;
+        uint64_t key;
         KeyValue<build_payload> * pointer;
     };
     State states[PREFETCH_SIZE];
@@ -437,6 +437,8 @@ void TestChainedPrefetch(size_t build_size, size_t probe_size, size_t match_poss
     for (size_t i = 0; i < PREFETCH_SIZE; ++i)
     {
         State & s = states[i];
+        if (s.stage == 0)
+            continue;
         if (s.stage == 1)
         {
             s.pointer = head[s.bucket];
@@ -800,14 +802,14 @@ void benchHashTable(int argc, char** argv)
     {
         TestChainedPrefetch<false>(n, m, match);
     }
-    else if (RUN == 3)
+    else if (RUN == 4)
     {
         if (construct_tuple)
             TestMyLinear<true>(n, m, match);
         else
             TestMyLinear<false>(n, m, match);
     }
-    else if (RUN == 4)
+    else if (RUN == 5)
     {
         if (construct_tuple)
             TestMyLinear2<true>(n, m, match);
