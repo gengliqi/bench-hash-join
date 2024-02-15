@@ -421,6 +421,7 @@ std::pair<std::vector<KeyValue<build_payload>>, std::vector<KeyValue<probe_paylo
     size_t max_len = 0;
     size_t empty_count = 0;
     size_t offset = 0;
+    size_t reconstruct_time = 0;
     for (size_t i = 0; i < probe_size; ++i)
     {
         size_t bucket = hash_method(probe_kv[i].key) & hash_mask;
@@ -455,6 +456,7 @@ std::pair<std::vector<KeyValue<build_payload>>, std::vector<KeyValue<probe_paylo
             ++h.status_counter;
             if (h.status_counter >= 3)
             {
+                ++reconstruct_time;
                 auto * p = static_cast<KeyValue<build_payload>*>(h.pointer);
                 auto * new_p = reinterpret_cast<KeyPointer*>(arena.alloc(h.length * sizeof(KeyPointer)));
                 size_t j = 0;
@@ -504,9 +506,9 @@ std::pair<std::vector<KeyValue<build_payload>>, std::vector<KeyValue<probe_paylo
     unsigned long long probe_hash_time = watch.elapsedFromLastTime();
 
     if constexpr (construct_tuple)
-        printf("%s probe hash table + construct tuple time %llu, size %lu, max_len %zu, empty_head %zu, jump_len_sum %zu \n", log_head.c_str(), probe_hash_time, offset, max_len, empty_count, jump_len_sum);
+        printf("%s probe hash table + construct tuple time %llu, size %lu, max_len %zu, empty_head %zu, jump_len_sum %zu, reconstruct_time %zu \n", log_head.c_str(), probe_hash_time, offset, max_len, empty_count, jump_len_sum, reconstruct_time);
     else
-        printf("%s probe hash table time %llu, size %lu, max_len %zu, empty_head %zu, jump_len_sum %zu \n", log_head.c_str(), probe_hash_time, offset, max_len, empty_count, jump_len_sum);
+        printf("%s probe hash table time %llu, size %lu, max_len %zu, empty_head %zu, jump_len_sum %zu, reconstruct_time %zu \n", log_head.c_str(), probe_hash_time, offset, max_len, empty_count, jump_len_sum, reconstruct_time);
 
     unsigned long long total_time = watch2.elapsedFromLastTime() - flush_cache_time;
     printf("%s total_time %llu\n", log_head.c_str(), total_time);
