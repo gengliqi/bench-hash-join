@@ -35,6 +35,21 @@ struct KeyValue
     KeyValue<payload> * next = nullptr;
 };
 
+template<size_t payload>
+bool compare(std::vector<KeyValue<payload>> v1, std::vector<KeyValue<payload>> v2)
+{
+    if (v1.size() != v2.size())
+        return false;
+    for (size_t i = 0; i < v1.size(); ++i)
+    {
+        if (v1[i].key != v2[i].key)
+            return false;
+        if (memcmp(v1[i].value.p, v2[i].value.p, payload) != 0)
+            return false;
+    }
+    return true;
+}
+
 template<size_t build_payload, size_t probe_payload>
 std::tuple<std::vector<KeyValue<build_payload>>, std::vector<KeyValue<probe_payload>>> init(size_t build_size, size_t probe_size, size_t match_possibility)
 {
@@ -270,11 +285,11 @@ void TestLinearPrefetch(size_t build_size, size_t probe_size, size_t match_possi
 }
 
 template<bool construct_tuple, size_t build_payload = 8, size_t probe_payload = 8>
-void TestChained(size_t build_size, size_t probe_size, size_t match_possibility)
+std::pair<std::vector<KeyValue<build_payload>>, std::vector<KeyValue<probe_payload>>> TestChained(size_t build_size, size_t probe_size, size_t match_possibility, const std::tuple<std::vector<KeyValue<build_payload>>, std::vector<KeyValue<probe_payload>>> * input = nullptr)
 {
     std::string log_head = "chained " + std::to_string(build_size) + "/" + std::to_string(probe_size) + "/" + std::to_string(match_possibility) + "/" + std::to_string(construct_tuple);
 
-    auto [build_kv, probe_kv] = init<build_payload, probe_payload>(build_size, probe_size, match_possibility);
+    auto [build_kv, probe_kv] = input ? *input : init<build_payload, probe_payload>(build_size, probe_size, match_possibility);
 
     auto hash_method = HashCRC32<uint64_t>();
 
@@ -345,6 +360,158 @@ void TestChained(size_t build_size, size_t probe_size, size_t match_possibility)
 
     unsigned long long total_time = watch2.elapsedFromLastTime() - flush_cache_time;
     printf("%s total_time %llu\n", log_head.c_str(), total_time);
+
+    return std::make_pair(std::move(output_build), std::move(output_probe));
+}
+
+template<bool construct_tuple, size_t build_payload = 8, size_t probe_payload = 8>
+std::pair<std::vector<KeyValue<build_payload>>, std::vector<KeyValue<probe_payload>>> TestYangHash(size_t build_size, size_t probe_size, size_t match_possibility, const std::tuple<std::vector<KeyValue<build_payload>>, std::vector<KeyValue<probe_payload>>> * input = nullptr)
+{
+    std::string log_head = "YangHash " + std::to_string(build_size) + "/" + std::to_string(probe_size) + "/" + std::to_string(match_possibility) + "/" + std::to_string(construct_tuple);
+
+    auto [build_kv, probe_kv] = input ? *input : init<build_payload, probe_payload>(build_size, probe_size, match_possibility);
+
+    auto hash_method = HashCRC32<uint64_t>();
+
+    Stopwatch watch;
+    Stopwatch watch2;
+
+    size_t head_size = 1 << (static_cast<size_t>(log2(build_size - 1)) + 2);
+    size_t hash_mask = head_size - 1;
+    struct Node
+    {
+        uint16_t status = 0;
+        uint16_t status_counter = 0;
+        uint32_t length = 0;
+        void * pointer = nullptr;
+    };
+    std::vector<Node> head(head_size);
+    for (size_t i = 0; i < build_size; ++i)
+    {
+        size_t hash = hash_method(build_kv[i].key);
+        size_t bucket = hash & hash_mask;
+        build_kv[i].next = static_cast<KeyValue<build_payload>*>(head[bucket].pointer);
+        ++head[bucket].length;
+        head[bucket].pointer = &build_kv[i];
+    }
+
+    unsigned long long build_hash_time = watch.elapsedFromLastTime();
+
+    printf("%s build hash table time %llu, head_size %zu\n", log_head.c_str(), build_hash_time, head_size);
+
+    FlushCache();
+    unsigned long long flush_cache_time = watch.elapsedFromLastTime();
+
+    //printf("%s flush cache time %llu\n", log_head.c_str(), flush_cache_time);
+
+    std::vector<KeyValue<build_payload>> output_build;
+    output_build.reserve(probe_size);
+    std::vector<KeyValue<probe_payload>> output_probe;
+    output_probe.reserve(probe_size);
+
+    Arena arena;
+
+    struct KeyPointer
+    {
+        uint64_t key;
+        KeyValue<build_payload> * pointer;
+    };
+
+    size_t jump_len_sum = 0;
+    size_t max_len = 0;
+    size_t empty_count = 0;
+    size_t offset = 0;
+    for (size_t i = 0; i < probe_size; ++i)
+    {
+        size_t bucket = hash_method(probe_kv[i].key) & hash_mask;
+        auto & h = head[bucket];
+        if (h.pointer == nullptr)
+        {
+            ++empty_count;
+            continue;
+        }
+
+        if (h.length >= 3)
+        {
+            if (h.status == 1)
+            {
+                auto * p = static_cast<KeyPointer*>(h.pointer);
+                for (size_t j = 0; j < h.length; ++j)
+                {
+                    if (p[j].key == probe_kv[i].key)
+                    {
+                        if (p[j].pointer->key == probe_kv[i].key)
+                            ++offset;
+                        if constexpr (construct_tuple)
+                        {
+                            output_build.emplace_back(*p[j].pointer);
+                            output_probe.emplace_back(probe_kv[i]);
+                        }
+                    }
+                }
+                continue;
+            }
+
+            ++h.status_counter;
+            if (h.status_counter >= 3)
+            {
+                auto * p = static_cast<KeyValue<build_payload>*>(h.pointer);
+                auto * new_p = reinterpret_cast<KeyPointer*>(arena.alloc(h.length * sizeof(KeyPointer)));
+                size_t j = 0;
+                while (p != nullptr)
+                {
+                    new_p[j].key = p->key;
+                    new_p[j].pointer = p;
+                    ++j;
+                    if (p->key == probe_kv[i].key)
+                    {
+                        ++offset;
+                        if constexpr (construct_tuple)
+                        {
+                            output_build.emplace_back(*p);
+                            output_probe.emplace_back(probe_kv[i]);
+                        }
+                    }
+                    p = p->next;
+                }
+                jump_len_sum += h.length;
+
+                h.pointer = new_p;
+                h.status = 1;
+                continue;
+            }
+        }
+
+        auto * p = static_cast<KeyValue<build_payload>*>(h.pointer);
+        while (p != nullptr)
+        {
+            if (p->key == probe_kv[i].key)
+            {
+                ++offset;
+                if constexpr (construct_tuple)
+                {
+                    output_build.emplace_back(*p);
+                    output_probe.emplace_back(probe_kv[i]);
+                }
+            }
+            p = p->next;
+        }
+        jump_len_sum += h.length;
+        if (h.length > max_len)
+            max_len = h.length;
+    }
+
+    unsigned long long probe_hash_time = watch.elapsedFromLastTime();
+
+    if constexpr (construct_tuple)
+        printf("%s probe hash table + construct tuple time %llu, size %lu, max_len %zu, empty_head %zu, jump_len_sum %zu \n", log_head.c_str(), probe_hash_time, offset, max_len, empty_count, jump_len_sum);
+    else
+        printf("%s probe hash table time %llu, size %lu, max_len %zu, empty_head %zu, jump_len_sum %zu \n", log_head.c_str(), probe_hash_time, offset, max_len, empty_count, jump_len_sum);
+
+    unsigned long long total_time = watch2.elapsedFromLastTime() - flush_cache_time;
+    printf("%s total_time %llu\n", log_head.c_str(), total_time);
+
+    return std::make_pair(std::move(output_build), std::move(output_probe));
 }
 
 template<bool construct_tuple, size_t build_payload = 8, size_t probe_payload = 8>
@@ -778,6 +945,21 @@ void TestMyLinear2(size_t build_size, size_t probe_size, size_t match_possibilit
 
 void benchHashTable(int argc, char** argv)
 {
+    auto input = init<8, 8>(1000, 10000, 25);
+    auto [a1, a2] = TestChained<true>(1000, 10000, 25, &input);
+    auto [b1, b2] = TestYangHash<true>(1000, 10000, 25, &input);
+
+    if (!compare(a1, b1))
+    {
+        printf("a1 != b1");
+        return;
+    }
+    if (!compare(a2, b2))
+    {
+        printf("a2 != b2");
+        return;
+    }
+
     if (argc < 6)
     {
         printf("lack argument\n");
@@ -829,6 +1011,13 @@ void benchHashTable(int argc, char** argv)
             TestMyLinear2<true>(n, m, match);
         else
             TestMyLinear2<false>(n, m, match);
+    }
+    else if (RUN == 6)
+    {
+        if (construct_tuple)
+            TestYangHash<true>(n, m, match);
+        else
+            TestYangHash<false>(n, m, match);
     }
     else
     {
