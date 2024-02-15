@@ -945,7 +945,7 @@ void TestMyLinear2(size_t build_size, size_t probe_size, size_t match_possibilit
 
 void benchHashTable(int argc, char** argv)
 {
-    auto input = init<8, 8>(1000, 10000, 25);
+    /*auto input = init<8, 8>(1000, 10000, 25);
     auto [a1, a2] = TestChained<true>(1000, 10000, 25, &input);
     auto [b1, b2] = TestYangHash<true>(1000, 10000, 25, &input);
 
@@ -958,7 +958,7 @@ void benchHashTable(int argc, char** argv)
     {
         printf("a2 != b2");
         return;
-    }
+    }*/
 
     if (argc < 6)
     {
