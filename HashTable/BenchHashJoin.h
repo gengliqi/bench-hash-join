@@ -365,6 +365,103 @@ std::pair<std::vector<KeyValue<build_payload>>, std::vector<KeyValue<probe_paylo
 }
 
 template<bool construct_tuple, size_t build_payload = 8, size_t probe_payload = 8>
+std::pair<std::vector<KeyValue<build_payload>>, std::vector<KeyValue<probe_payload>>> TestYangChained(size_t build_size, size_t probe_size, size_t match_possibility, const std::tuple<std::vector<KeyValue<build_payload>>, std::vector<KeyValue<probe_payload>>> * input = nullptr)
+{
+    std::string log_head = "YangChained " + std::to_string(build_size) + "/" + std::to_string(probe_size) + "/" + std::to_string(match_possibility) + "/" + std::to_string(construct_tuple);
+
+    auto [build_kv, probe_kv] = input ? *input : init<build_payload, probe_payload>(build_size, probe_size, match_possibility);
+
+    auto hash_method = HashCRC32<uint64_t>();
+
+    Stopwatch watch;
+    Stopwatch watch2;
+
+    size_t head_size = 1 << (static_cast<size_t>(log2(build_size - 1)) + 2);
+    size_t hash_mask = head_size - 1;
+    struct Node
+    {
+        size_t hash = 0;
+        void * pointer = nullptr;
+    };
+    std::vector<Node> head(head_size);
+    for (size_t i = 0; i < build_size; ++i)
+    {
+        size_t hash = hash_method(build_kv[i].key);
+        size_t bucket = hash & hash_mask;
+        build_kv[i].next = static_cast<KeyValue<build_payload>*>(head[bucket].pointer);
+        head[bucket].pointer = &build_kv[i];
+        head[bucket].hash |= hash;
+    }
+
+    unsigned long long build_hash_time = watch.elapsedFromLastTime();
+
+    printf("%s build hash table time %llu, head_size %zu\n", log_head.c_str(), build_hash_time, head_size);
+
+    FlushCache();
+    unsigned long long flush_cache_time = watch.elapsedFromLastTime();
+
+    //printf("%s flush cache time %llu\n", log_head.c_str(), flush_cache_time);
+
+    std::vector<KeyValue<build_payload>> output_build;
+    output_build.reserve(probe_size);
+    std::vector<KeyValue<probe_payload>> output_probe;
+    output_probe.reserve(probe_size);
+
+    size_t jump_len_sum = 0;
+    size_t max_len = 0;
+    size_t empty_count = 0;
+    size_t offset = 0;
+    size_t or_hash_stop_count = 0;
+    for (size_t i = 0; i < probe_size; ++i)
+    {
+        size_t hash = hash_method(probe_kv[i].key);
+        size_t bucket = hash & hash_mask;
+        auto & h = head[bucket];
+        if (head[bucket].pointer == nullptr)
+        {
+            ++empty_count;
+            continue;
+        }
+        if ((hash | head[bucket].hash) != head[bucket].hash)
+        {
+            ++or_hash_stop_count;
+            continue;
+        }
+        auto * p = static_cast<KeyValue<build_payload>*>(h.pointer);
+        size_t len = 0;
+        while (p != nullptr)
+        {
+            if (p->key == probe_kv[i].key)
+            {
+                ++offset;
+                if constexpr (construct_tuple)
+                {
+                    output_build.emplace_back(*p);
+                    output_probe.emplace_back(probe_kv[i]);
+                }
+            }
+            ++len;
+            p = p->next;
+        }
+        jump_len_sum += len;
+        if (len > max_len)
+            max_len = len;
+    }
+
+    unsigned long long probe_hash_time = watch.elapsedFromLastTime();
+
+    if constexpr (construct_tuple)
+        printf("%s probe hash table + construct tuple time %llu, size %lu, max_len %zu, empty_head %zu, jump_len_sum %zu, or_hash_stop_count %zu \n", log_head.c_str(), probe_hash_time, offset, max_len, empty_count, jump_len_sum, or_hash_stop_count);
+    else
+        printf("%s probe hash table time %llu, size %lu, max_len %zu, empty_head %zu, jump_len_sum %zu, or_hash_stop_count %zu \n", log_head.c_str(), probe_hash_time, offset, max_len, empty_count, jump_len_sum, or_hash_stop_count);
+
+    unsigned long long total_time = watch2.elapsedFromLastTime() - flush_cache_time;
+    printf("%s total_time %llu\n", log_head.c_str(), total_time);
+
+    return std::make_pair(std::move(output_build), std::move(output_probe));
+}
+
+template<bool construct_tuple, size_t build_payload = 8, size_t probe_payload = 8>
 std::pair<std::vector<KeyValue<build_payload>>, std::vector<KeyValue<probe_payload>>> TestYangHash(size_t build_size, size_t probe_size, size_t match_possibility, const std::tuple<std::vector<KeyValue<build_payload>>, std::vector<KeyValue<probe_payload>>> * input = nullptr)
 {
     std::string log_head = "YangHash " + std::to_string(build_size) + "/" + std::to_string(probe_size) + "/" + std::to_string(match_possibility) + "/" + std::to_string(construct_tuple);
@@ -1020,6 +1117,13 @@ void benchHashTable(int argc, char** argv)
             TestYangHash<true>(n, m, match);
         else
             TestYangHash<false>(n, m, match);
+    }
+    else if (RUN == 7)
+    {
+        if (construct_tuple)
+            TestYangChained<true>(n, m, match);
+        else
+            TestYangChained<false>(n, m, match);
     }
     else
     {
