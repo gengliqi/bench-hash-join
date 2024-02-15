@@ -417,11 +417,6 @@ std::pair<std::vector<KeyValue<build_payload>>, std::vector<KeyValue<probe_paylo
         size_t hash = hash_method(probe_kv[i].key);
         size_t bucket = hash & hash_mask;
         auto & h = head[bucket];
-        if (head[bucket].pointer == nullptr)
-        {
-            ++empty_count;
-            continue;
-        }
         if ((hash | head[bucket].hash) != head[bucket].hash)
         {
             ++or_hash_stop_count;
@@ -444,6 +439,8 @@ std::pair<std::vector<KeyValue<build_payload>>, std::vector<KeyValue<probe_paylo
             p = p->next;
         }
         jump_len_sum += len;
+        if (len == 0)
+            ++empty_count;
         if (len > max_len)
             max_len = len;
     }
