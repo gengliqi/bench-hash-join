@@ -316,6 +316,21 @@ std::pair<std::vector<KeyValue<build_payload>>, std::vector<KeyValue<probe_paylo
 
     //printf("%s flush cache time %llu\n", log_head.c_str(), flush_cache_time);
 
+    size_t empty = 0;
+    for (size_t i = 0; i < probe_size; ++i)
+    {
+        size_t hash = hash_method(probe_kv[i].key);
+        size_t bucket = hash & hash_mask;
+        auto & h = head[bucket];
+        if (head[bucket] == nullptr)
+            ++empty;
+    }
+
+    auto time = watch.elapsedFromLastTime();
+    printf("%s just get head array time %llu, empty %zu \n", log_head.c_str(), time, empty);
+
+    flush_cache_time += time;
+
     std::vector<KeyValue<build_payload>> output_build;
     output_build.reserve(probe_size);
     std::vector<KeyValue<probe_payload>> output_probe;
@@ -402,6 +417,21 @@ std::pair<std::vector<KeyValue<build_payload>>, std::vector<KeyValue<probe_paylo
 
     //printf("%s flush cache time %llu\n", log_head.c_str(), flush_cache_time);
 
+    size_t empty = 0;
+    for (size_t i = 0; i < probe_size; ++i)
+    {
+        size_t hash = hash_method(probe_kv[i].key);
+        size_t bucket = hash & hash_mask;
+        auto & h = head[bucket];
+        if (head[bucket].pointer == nullptr)
+            ++empty;
+    }
+
+    auto time = watch.elapsedFromLastTime();
+    printf("%s just get head array time %llu, empty %zu \n", log_head.c_str(), time, empty);
+
+    flush_cache_time += time;
+
     std::vector<KeyValue<build_payload>> output_build;
     output_build.reserve(probe_size);
     std::vector<KeyValue<probe_payload>> output_probe;
@@ -412,6 +442,7 @@ std::pair<std::vector<KeyValue<build_payload>>, std::vector<KeyValue<probe_paylo
     size_t empty_count = 0;
     size_t offset = 0;
     size_t or_hash_stop_count = 0;
+
     for (size_t i = 0; i < probe_size; ++i)
     {
         size_t hash = hash_method(probe_kv[i].key);
